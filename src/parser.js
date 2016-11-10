@@ -1,6 +1,14 @@
 
 let vars = {}
 
+let setVar = (name, value) => {
+  if (vars[name] != null) {
+    throw new Error('variable already defined: ' + name)
+  } else {
+    vars[name] = value
+  }
+}
+
 let getVar = (name) => {
   let val = vars[name]
   if (val == null) {
@@ -69,7 +77,7 @@ let getChildren = (input, children = []) => {
       let variable = get('variable', input)
       get('space', input)
       let value = parseString(input)
-      vars[variable.value] = value
+      setVar(variable.value, value)
       return getChildren(input, children)
     }
     case 'close_bracket':
