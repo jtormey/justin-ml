@@ -13,6 +13,10 @@ let categorize = (value) => {
       return { type: 'open_bracket', value }
     case '}':
       return { type: 'close_bracket', value }
+    case '//':
+      return { type: 'comment', value }
+    case '\n':
+      return { type: 'newline', value }
     case 'def':
       return { type: 'keyword', value }
     default:
@@ -25,7 +29,7 @@ let categorize = (value) => {
 module.exports = (input) => {
   return input
     .trim()
-    .split(/(\s|:|")/g)
-    .filter(s => s !== '\n' && s.length)
+    .split(/(\s|:|\/\/|")/g)
+    .filter(s => s.length)
     .map(categorize)
 }

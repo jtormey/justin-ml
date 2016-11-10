@@ -18,6 +18,10 @@ let get = (type, input) => {
   }
 }
 
+let takeUntil = (type, input) => {
+  while (input.length && input[0].type !== type) input.shift()
+}
+
 let parseString = (input) => {
   let open = input.shift()
   if (open.type !== 'quote') throw new Error('expected: quote (open)')
@@ -51,11 +55,13 @@ let getAttrs = (input, attrs = []) => {
       return attrs
     default:
       throw new Error(`expected type: space, word (received: ${token.type})`)
-
   }
 }
 
 let getChildren = (input, children = []) => {
+  if (input.length === 0) {
+    return children
+  }
   let token = input.shift()
   switch (token.type) {
     case 'keyword': {
@@ -99,6 +105,13 @@ let getChildren = (input, children = []) => {
       getChildren(input, children)
       break
     }
+    case 'comment':
+      takeUntil('newline', input)
+      getChildren(input, children)
+      break
+    case 'newline':
+      getChildren(input, children)
+      break
     default:
       throw new Error(`expected type: word (received ${token.type})`)
   }
