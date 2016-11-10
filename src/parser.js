@@ -1,4 +1,23 @@
 
+let vars = {}
+
+let getVar = (name) => {
+  let val = vars[name]
+  if (val == null) {
+    throw new Error('variable not found: ' + name)
+  }
+  return String(val)
+}
+
+let get = (type, input) => {
+  let token = input.shift()
+  if (token.type !== type) {
+    throw new Error('expected: ' + type)
+  } else {
+    return token
+  }
+}
+
 let parseString = (input) => {
   let open = input.shift()
   if (open.type !== 'quote') throw new Error('expected: quote (open)')
@@ -22,17 +41,16 @@ let getAttrs = (input, attrs = []) => {
       return getAttrs(input, attrs)
     case 'word':
       attr.name = token.value
-      if (input.shift().type !== 'colon') {
-        throw new Error('expected type: colon')
-      } else {
-        attr.value = parseString(input)
-      }
+      get('colon', input)
+      attr.value = input[0].type === 'variable'
+        ? getVar(input.shift().value)
+        : parseString(input)
       attrs.push(attr)
       return getAttrs(input, attrs)
     case 'open_bracket':
       return attrs
     default:
-      throw new Error('expected type: space, word')
+      throw new Error(`expected type: space, word (received: ${token.type})`)
 
   }
 }
@@ -40,10 +58,18 @@ let getAttrs = (input, attrs = []) => {
 let getChildren = (input, children = []) => {
   let token = input.shift()
   switch (token.type) {
+    case 'keyword': {
+      get('space', input)
+      let variable = get('variable', input)
+      get('space', input)
+      let value = parseString(input)
+      vars[variable.value] = value
+      return getChildren(input, children)
+    }
     case 'close_bracket':
       return children
     case 'space':
-      return getChildren(input, children, 0)
+      return getChildren(input, children)
     case 'word': {
       children.push({
         type: 'Element',
@@ -52,7 +78,7 @@ let getChildren = (input, children = []) => {
         children: getChildren(input)
       })
       if (input.length) {
-        getChildren(input, children, 1)
+        getChildren(input, children)
       }
       break
     }
@@ -62,7 +88,15 @@ let getChildren = (input, children = []) => {
         type: 'TextNode',
         value: parseString(input)
       })
-      getChildren(input, children, 2)
+      getChildren(input, children)
+      break
+    }
+    case 'variable': {
+      children.push({
+        type: 'TextNode',
+        value: getVar(token.value)
+      })
+      getChildren(input, children)
       break
     }
     default:

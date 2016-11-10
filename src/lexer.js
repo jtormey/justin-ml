@@ -13,8 +13,12 @@ let categorize = (value) => {
       return { type: 'open_bracket', value }
     case '}':
       return { type: 'close_bracket', value }
+    case 'def':
+      return { type: 'keyword', value }
     default:
-      return { type: 'word', value }
+      return value[0] === '$'
+        ? { type: 'variable', value }
+        : { type: 'word', value }
   }
 }
 
