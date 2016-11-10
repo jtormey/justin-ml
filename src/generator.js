@@ -5,18 +5,23 @@ let renderAttrs = (attrs) => {
     .join('')
 }
 
-let renderElem = (elem) => {
+let renderIndent = (x) => (
+  [...Array(x)].map(_ => ' ').join('')
+)
+
+let renderElem = (options, lvl = 0) => (elem) => {
+  let indent = renderIndent(lvl * options.indentDepth)
   switch (elem.type) {
     case 'TextNode':
-      return elem.value
+      return indent + elem.value
     case 'Element': {
       let tag = elem.name
       let attrs = renderAttrs(elem.attrs)
       return [
-        '<' + tag + attrs + '>',
-        ...elem.children.map(renderElem),
-        '</' + tag + '>'
-      ].join('')
+        indent + '<' + tag + attrs + '>',
+        ...elem.children.map(renderElem(options, lvl + 1)),
+        indent + '</' + tag + '>'
+      ].join(options.lineSeperator)
     }
     default:
       throw new Error('received invalid type')
@@ -24,7 +29,12 @@ let renderElem = (elem) => {
 }
 
 module.exports = (input) => {
+  let min = Boolean(process.env.MINIFY)
+
+  let lineSeperator = min ? '' : '\n'
+  let indentDepth = min ? 0 : 2
+
   return input.children
-    .map(renderElem)
-    .join('')
+    .map(renderElem({ lineSeperator, indentDepth }))
+    .join(lineSeperator)
 }
