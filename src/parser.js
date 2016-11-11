@@ -1,6 +1,12 @@
 
 let vars = {}
 
+let staticVar = (value) => ({ type: 'Static', value })
+let tmplVar = (value) => ({ type: 'Template', value })
+let elementNode = (name, attrs, children) => ({ type: 'Element', name, attrs, children })
+let textNode = (value) => ({ type: 'TextNode', value })
+let attributeNode = (name, value) => ({ type: 'Attribute', name, value })
+
 let setVar = (name, value) => {
   if (vars[name] != null) throw new Error('variable already defined: ' + name)
   else vars[name] = value
@@ -39,7 +45,6 @@ let parseString = (input) => {
 
 let getAttrs = (input, attrs = []) => {
   let token = input.shift()
-  let attr = { type: 'Attribute' }
 
   switch (token.type) {
     case 'open_bracket':
@@ -48,11 +53,11 @@ let getAttrs = (input, attrs = []) => {
       break
 
     case 'word': {
-      attr.name = token.value
+      let name = token.value
       get('colon', input)
       let isNextVar = input[0].type === 'variable'
-      attr.value = isNextVar ? getVar(get('variable', input)) : parseString(input)
-      attrs.push(attr)
+      let value = isNextVar ? getVar(get('variable', input)) : parseString(input)
+      attrs.push(attributeNode(name, value))
       break
     }
 
@@ -83,10 +88,8 @@ let getChildren = (input, children = []) => {
 
       switch (token.value) {
         case 'def': {
-          setVar(name, {
-            type: 'Static',
-            value: parseString(input)
-          })
+          let variable = staticVar(parseString(input))
+          setVar(name, variable)
           break
         }
 
@@ -96,10 +99,7 @@ let getChildren = (input, children = []) => {
           if (children.length !== 1) {
             throw new Error('template must have one child element')
           }
-          setVar(name, {
-            type: 'Template',
-            value: children[0]
-          })
+          setVar(name, tmplVar(children[0]))
           break
         }
       }
@@ -107,21 +107,14 @@ let getChildren = (input, children = []) => {
     }
 
     case 'word': {
-      children.push({
-        type: 'Element',
-        name: token.value,
-        attrs: getAttrs(input),
-        children: getChildren(input)
-      })
+      let node = elementNode(token.value, getAttrs(input), getChildren(input))
+      children.push(node)
       break
     }
 
     case 'quote': {
       input.unshift(token)
-      children.push({
-        type: 'TextNode',
-        value: parseString(input)
-      })
+      children.push(textNode(parseString(input)))
       break
     }
 
@@ -129,10 +122,7 @@ let getChildren = (input, children = []) => {
       let variable = getVar(token.value)
       switch (variable.type) {
         case 'Static':
-          children.push({
-            type: 'TextNode',
-            value: variable.value
-          })
+          children.push(textNode(variable.value))
           break
         case 'Template':
           children.push(variable.value)
