@@ -1,6 +1,32 @@
 
-let staticVar = (value) => ({ type: 'Static', value })
-let tmplVar = (value) => ({ type: 'Template', value })
+let generalError = (type, errorf) => (...args) => (
+  `${type}\n\n\t${errorf(...args)}\n`
+)
+
+let syntaxError = generalError('Syntax Error', (typeA, typeB) =>
+  `Expected <${typeA}> but received <${typeB}>`
+)
+
+let typeError = generalError('Type Error', (type, varName) => {
+  switch (type) {
+    case 'undefined':
+      return `Variable '${varName}' not found, is it out of scope?`
+    case 'defined':
+      return `Variable '${varName}' has already been defined`
+    case 'not_static':
+      return `Attribute variable '${varName}' must be assigned to a static type`
+    case 'tmpl_child':
+      return `Template '${varName}' must have exactly one child`
+  }
+})
+
+let staticVar = (value) => ({
+  type: 'Static', value
+})
+
+let tmplVar = (value) => ({
+  type: 'Template', value
+})
 
 let rootNode = () => ({
   type: 'Root', scope: {}
@@ -10,24 +36,38 @@ let elementNode = (parent, name, attrs) => ({
   type: 'Element', name, attrs, scope: Object.assign({}, parent.scope)
 })
 
-let textNode = (value) => ({ type: 'TextNode', value })
-let attributeNode = (name, value) => ({ type: 'Attribute', name, value })
+let textNode = (value) => ({
+  type: 'TextNode', value
+})
+
+let attributeNode = (name, value) => ({
+  type: 'Attribute', name, value
+})
 
 let setVar = (node, name, value) => {
-  if (node.scope[name] != null) throw new Error('variable already defined: ' + name)
-  else node.scope[name] = value
+  if (node.scope[name] != null) {
+    let e = typeError('defined', name)
+    throw new Error(e)
+  }
+  node.scope[name] = value
 }
 
 let getVar = (node, name) => {
   let variable = node.scope[name]
-  if (variable == null) throw new Error('variable not found: ' + name)
+  if (variable == null) {
+    let e = typeError('undefined', name)
+    throw new Error(e)
+  }
   return variable
 }
 
 let get = (type, input) => {
   let token = take(input)
-  if (token.type !== type) throw new Error('expected: ' + type)
-  else return token.value
+  if (token.type !== type) {
+    let e = syntaxError(type, token.type)
+    throw new Error(e)
+  }
+  return token.value
 }
 
 let take = (input) => input.shift()
@@ -45,7 +85,8 @@ let getAttrs = (parent, input, attrs = []) => {
       if (input[0].type === 'variable') {
         let variable = getVar(parent, get('variable', input))
         if (variable.type !== 'Static') {
-          throw new Error('attribute variables must be static')
+          let e = typeError('not_static', token.value)
+          throw new Error(e)
         }
         value = variable.value
       } else {
@@ -56,7 +97,9 @@ let getAttrs = (parent, input, attrs = []) => {
     }
 
     default:
-      throw new Error(`expected type: space, word (received: ${token.type})`)
+      let expected = ['open_bracket', 'attribute']
+      let e = syntaxError(expected, token.type)
+      throw new Error(e)
   }
   return getAttrs(parent, input, attrs)
 }
@@ -82,7 +125,8 @@ let getChildren = (parent, input, children = []) => {
           get('open_bracket', input)
           let children = getChildren(parent, input)
           if (children.length !== 1) {
-            throw new Error('template must have one child element')
+            let e = typeError('tmpl_child', name)
+            throw new Error(e)
           }
           setVar(parent, name, tmplVar(children[0]))
           break
@@ -112,14 +156,14 @@ let getChildren = (parent, input, children = []) => {
         case 'Template':
           children.push(variable.value)
           break
-        default:
-          throw new Error('encountered unknown variable type')
       }
       break
     }
 
     default:
-      throw new Error(`expected type: word (received ${token.type})`)
+      let expected = ['close_bracket', 'keyword', 'tag', 'string', 'variable']
+      let e = syntaxError(expected, token.type)
+      throw new Error(e)
   }
 
   return input.length > 0 ? getChildren(parent, input, children) : children
