@@ -34,6 +34,10 @@ let takeUntil = (type, input) => {
   while (input.length && input[0].type !== type) input.shift()
 }
 
+let takeWhile = (type, input) => {
+  while (input.length && input[0].type === type) input.shift()
+}
+
 let parseString = (input) => {
   let open = input.shift()
   if (open.type !== 'quote') throw new Error('expected: quote (open)')
@@ -62,6 +66,7 @@ let getAttrs = (parent, input, attrs = []) => {
       let value
       let name = token.value
       get('colon', input)
+      takeWhile('space', input)
       if (input[0].type === 'variable') {
         let variable = getVar(parent, get('variable', input))
         if (variable.type !== 'Static') {
