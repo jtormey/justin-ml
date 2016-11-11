@@ -25,48 +25,23 @@ let getVar = (node, name) => {
 }
 
 let get = (type, input) => {
-  let token = input.shift()
+  let token = take(input)
   if (token.type !== type) throw new Error('expected: ' + type)
   else return token.value
 }
 
-let takeUntil = (type, input) => {
-  while (input.length && input[0].type !== type) input.shift()
-}
-
-let takeWhile = (type, input) => {
-  while (input.length && input[0].type === type) input.shift()
-}
-
-let parseString = (input) => {
-  let open = input.shift()
-  if (open.type !== 'quote') throw new Error('expected: quote (open)')
-  let str = ''
-  while (input[0].type !== 'quote') {
-    let next = input.shift()
-    if (next == null || next.value == null) {
-      throw new Error('next string value was null')
-    }
-    str += next.value
-  }
-  input.shift()
-  return str
-}
+let take = (input) => input.shift()
 
 let getAttrs = (parent, input, attrs = []) => {
-  let token = input.shift()
+  let token = take(input)
 
   switch (token.type) {
     case 'open_bracket':
       return attrs
-    case 'space':
-      break
 
-    case 'word': {
+    case 'attribute': {
       let value
-      let name = token.value
-      get('colon', input)
-      takeWhile('space', input)
+      let name = token.value.slice(0, -1)
       if (input[0].type === 'variable') {
         let variable = getVar(parent, get('variable', input))
         if (variable.type !== 'Static') {
@@ -74,7 +49,7 @@ let getAttrs = (parent, input, attrs = []) => {
         }
         value = variable.value
       } else {
-        value = parseString(input)
+        value = get('string', input).slice(1, -1)
       }
       attrs.push(attributeNode(name, value))
       break
@@ -87,27 +62,18 @@ let getAttrs = (parent, input, attrs = []) => {
 }
 
 let getChildren = (parent, input, children = []) => {
-  let token = input.shift()
+  let token = take(input)
 
   switch (token.type) {
     case 'close_bracket':
       return children
-    case 'space':
-      break
-    case 'newline':
-      break
-    case 'comment':
-      takeUntil('newline', input)
-      break
 
     case 'keyword': {
-      get('space', input)
       let name = get('variable', input)
-      get('space', input)
 
       switch (token.value) {
         case 'def': {
-          let variable = staticVar(parseString(input))
+          let variable = staticVar(get('string', input).slice(1, -1))
           setVar(parent, name, variable)
           break
         }
@@ -125,16 +91,15 @@ let getChildren = (parent, input, children = []) => {
       break
     }
 
-    case 'word': {
+    case 'tag': {
       let node = elementNode(parent, token.value, getAttrs(parent, input))
       node.children = getChildren(node, input)
       children.push(node)
       break
     }
 
-    case 'quote': {
-      input.unshift(token)
-      children.push(textNode(parseString(input)))
+    case 'string': {
+      children.push(textNode(token.value.slice(1, -1)))
       break
     }
 
