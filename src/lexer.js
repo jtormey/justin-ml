@@ -1,28 +1,32 @@
 
+let keywords = ['def', 'tmpl']
+
 let categorize = (value) => {
-  switch (value) {
-    case ' ':
+  let is = (s) => value === s
+  let startsWith = (s) => value.indexOf(s) === 0
+  let isKeyword = () => keywords.indexOf(value) > -1
+
+  switch (true) {
+    case is(' '):
       return { type: 'space', value }
-    case ':':
+    case is(':'):
       return { type: 'colon', value }
-    case ',':
-      return { type: 'comma', value }
-    case '"':
+    case is('"'):
       return { type: 'quote', value }
-    case '{':
+    case is('{'):
       return { type: 'open_bracket', value }
-    case '}':
+    case is('}'):
       return { type: 'close_bracket', value }
-    case '//':
-      return { type: 'comment', value }
-    case '\n':
+    case is('\n'):
       return { type: 'newline', value }
-    case 'def':
+    case startsWith('//'):
+      return { type: 'comment', value }
+    case startsWith('$'):
+      return { type: 'variable', value }
+    case isKeyword():
       return { type: 'keyword', value }
     default:
-      return value[0] === '$'
-        ? { type: 'variable', value }
-        : { type: 'word', value }
+      return { type: 'word', value }
   }
 }
 

@@ -7,9 +7,9 @@ let setVar = (name, value) => {
 }
 
 let getVar = (name) => {
-  let val = vars[name]
-  if (val == null) throw new Error('variable not found: ' + name)
-  return String(val)
+  let variable = vars[name]
+  if (variable == null) throw new Error('variable not found: ' + name)
+  return variable
 }
 
 let get = (type, input) => {
@@ -78,10 +78,31 @@ let getChildren = (input, children = []) => {
 
     case 'keyword': {
       get('space', input)
-      let variable = get('variable', input)
+      let name = get('variable', input)
       get('space', input)
-      let value = parseString(input)
-      setVar(variable, value)
+
+      switch (token.value) {
+        case 'def': {
+          setVar(name, {
+            type: 'Static',
+            value: parseString(input)
+          })
+          break
+        }
+
+        case 'tmpl': {
+          get('open_bracket', input)
+          let children = getChildren(input)
+          if (children.length !== 1) {
+            throw new Error('template must have one child element')
+          }
+          setVar(name, {
+            type: 'Template',
+            value: children[0]
+          })
+          break
+        }
+      }
       break
     }
 
@@ -105,10 +126,20 @@ let getChildren = (input, children = []) => {
     }
 
     case 'variable': {
-      children.push({
-        type: 'TextNode',
-        value: getVar(token.value)
-      })
+      let variable = getVar(token.value)
+      switch (variable.type) {
+        case 'Static':
+          children.push({
+            type: 'TextNode',
+            value: variable.value
+          })
+          break
+        case 'Template':
+          children.push(variable.value)
+          break
+        default:
+          throw new Error('encountered unknown variable type')
+      }
       break
     }
 
