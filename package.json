@@ -4,10 +4,20 @@
   "description": "Simple compiler",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node_modules/.bin/mocha test/*.spec.js"
   },
   "author": "Justin Tormey <jrtormey@gmail.com>",
+  "standard": {
+    "globals": [
+      "describe",
+      "fdescribe",
+      "it",
+      "fit"
+    ]
+  },
   "devDependencies": {
+    "chai": "~3.5.0",
+    "mocha": "~3.1.2",
     "standard": "~8.5.0"
   }
 }

@@ -5,8 +5,8 @@ let renderAttrs = (attrs) => (
   attrs.map(a => ` ${a.name}="${a.value}"`).join('')
 )
 
-let isSingleTextNode = (xs) => (
-  xs.length === 1 && typeof xs[0] === 'string'
+let isCompact = (xs) => (
+  !xs.length || (xs.length === 1 && typeof xs[0] === 'string')
 )
 
 let renderElem = (options, lvl = 0) => (elem) => {
@@ -17,7 +17,7 @@ let renderElem = (options, lvl = 0) => (elem) => {
   }
 
   let attrs = renderAttrs(elem.attributes)
-  let compact = isSingleTextNode(elem.children)
+  let compact = isCompact(elem.children)
   let children = compact ? elem.children : elem.children.map(renderElem(options, lvl + 1))
 
   return [
@@ -27,10 +27,9 @@ let renderElem = (options, lvl = 0) => (elem) => {
   ].join(compact ? '' : options.lineSeperator)
 }
 
-module.exports = (input) => {
-  let min = Boolean(process.env.MINIFY)
-  let lineSeperator = min ? '' : '\n'
-  let indentDepth = min ? 0 : 2
+module.exports = (input, options = {}) => {
+  let lineSeperator = options.pretty ? '\n' : ''
+  let indentDepth = options.pretty ? 2 : 0
 
   return input
     .map(renderElem({ lineSeperator, indentDepth }))
