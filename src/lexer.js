@@ -49,7 +49,7 @@ lexer
   .match(/^\s/, null)
   .match(/^\/\/[^\n]*/, null)
   .match(/^def|^tmpl/, 'keyword', { value: true })
-  .match(/^"[^"]*"/, 'string', { value: true })
+  .match(/^"[^"^\n]*"/, 'string', { value: true })
   .match(/^\$(\w|\d)+/, 'variable', { value: true })
   .match(/^\w+(-\w+)?/, 'tag', { value: true })
   .match(/^\w+(-\w+)?:/, 'attribute', { value: true })
