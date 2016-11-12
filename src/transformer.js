@@ -1,5 +1,6 @@
 
 let { parse } = require('./util/helpers')
+let { typeError } = require('./util/errors')
 
 let attribute = (scope) => (attr) => {
   return {
@@ -18,6 +19,9 @@ let transform = (scope) => (node) => {
       return { tag: node.name, attributes, children }
     case 'Variable':
       let ref = scope.get(node.name)
+      if (ref == null) {
+        throw new Error(typeError('undefined', node.name))
+      }
       return evaluate(scope, ref, node.args)
     case 'Text':
       return parse(node.value)
