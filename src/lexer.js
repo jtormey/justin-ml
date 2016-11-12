@@ -1,7 +1,6 @@
 
-let pad = (c, n) => [...Array(n)].map(_ => c).join('')
-let assign = (...args) => Object.assign({}, ...args)
-let first = (xs) => xs && xs.length ? xs[0] : null
+let { assign, first } = require('./util/helpers')
+let { lexicalError } = require('./util/errors')
 
 class Lexer {
   constructor () {
@@ -18,10 +17,7 @@ class Lexer {
       .sort((a, b) => b.value.length > a.value.length)[0]
 
     if (!next) {
-      let e = `Unexpected Token (line ${_meta.lc})\n
-        | ${_meta.lastline}${input.split('\n')[0]}
-        | ${pad('~', _meta.lastline.length)}^
-      `
+      let e = lexicalError(input, _meta)
       throw new Error(e)
     }
 

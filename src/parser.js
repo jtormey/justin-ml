@@ -1,58 +1,11 @@
 
-let assign = (...args) => Object.assign({}, ...args)
+let { assign } = require('./util/helpers')
+let { staticVar, tmplVar, rootNode, elementNode, textNode, attributeNode, variableNode } = require('./util/nodes')
+let { syntaxError, typeError } = require('./util/errors')
 
 let argsToScope = (scope, args) => (
   assign(scope, ...args.map(a => ({ [a.value]: { type: 'Argument', value: a.value } })))
 )
-
-let generalError = (type, errorf) => (...args) => (
-  `${type}\n\n\t${errorf(...args)}\n`
-)
-
-let syntaxError = generalError('Syntax Error', (typeA, typeB) =>
-  `Expected <${typeA}> but received <${typeB}>`
-)
-
-let typeError = generalError('Type Error', (type, varName) => {
-  switch (type) {
-    case 'undefined':
-      return `Variable '${varName}' not found, is it out of scope?`
-    case 'defined':
-      return `Variable '${varName}' has already been defined`
-    case 'not_static':
-      return `Attribute variable '${varName}' must be assigned to a static type`
-    case 'tmpl_child':
-      return `Template '${varName}' must have exactly one child`
-  }
-})
-
-let staticVar = (value) => ({
-  type: 'Static', value
-})
-
-let tmplVar = (scope, args) => ({
-  type: 'Template', scope: Object.assign({}, scope), args
-})
-
-let rootNode = () => ({
-  type: 'Root', scope: {}
-})
-
-let elementNode = (scope, name, attrs) => ({
-  type: 'Element', name, attrs, scope: Object.assign({}, scope)
-})
-
-let textNode = (value) => ({
-  type: 'TextNode', value
-})
-
-let attributeNode = (name, value) => ({
-  type: 'Attribute', name, value
-})
-
-let variableNode = (value, args) => ({
-  type: 'Variable', value, args
-})
 
 let setVar = (scope, name, value) => {
   if (scope[name] != null) {

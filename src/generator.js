@@ -1,11 +1,6 @@
 
-let parse = JSON.parse
-let assign = (...args) => Object.assign({}, ...args)
-let show = (o) => console.log(JSON.stringify(o, null, 2))
-
-let textNode = (value) => ({
-  type: 'TextNode', value
-})
+let { parse, assign, inherit } = require('./util/helpers')
+let { textNode } = require('./util/nodes')
 
 let evaluate = (parent, elem) => {
   let scope = parent.scope
@@ -31,7 +26,7 @@ let evaluate = (parent, elem) => {
         }
       })
       let children = assign(variable.value)
-      children.scope = assign(children.scope, tmpScope)
+      inherit(children.scope, tmpScope)
       return [assign(parent, { scope: tmpScope }), children]
     }
     default:
