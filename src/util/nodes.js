@@ -1,28 +1,20 @@
 
-exports.staticVar = (value) => ({
-  type: 'Static', value
+exports.root = (scope) => ({
+  type: 'Root', scope
 })
 
-exports.tmplVar = (scope, args) => ({
-  type: 'Template', scope: Object.assign({}, scope), args
+exports.element = (scope, name, attrs) => ({
+  type: 'Element', scope: scope.create(), name, attrs
 })
 
-exports.rootNode = () => ({
-  type: 'Root', scope: {}
+exports.text = (value) => ({
+  type: 'Text', value
 })
 
-exports.elementNode = (scope, name, attrs) => ({
-  type: 'Element', name, attrs, scope: Object.assign({}, scope)
+exports.variable = (name, args) => ({
+  type: 'Variable', name, args
 })
 
-exports.textNode = (value) => ({
-  type: 'TextNode', value
-})
-
-exports.attributeNode = (name, value) => ({
+exports.attribute = (name, value) => ({
   type: 'Attribute', name, value
-})
-
-exports.variableNode = (value, args) => ({
-  type: 'Variable', value, args
 })

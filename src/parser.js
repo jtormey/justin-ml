@@ -1,11 +1,7 @@
 
-let { assign, contains, asArray } = require('./util/helpers')
-let { staticVar, tmplVar, rootNode, elementNode, textNode, attributeNode, variableNode } = require('./util/nodes')
+let { contains, asArray } = require('./util/helpers')
+let { root, element, text, variable, attribute } = require('./util/nodes')
 let { syntaxError, typeError, eoiError } = require('./util/errors')
-
-let argsToScope = (scope, args) => (
-  assign(scope, ...args.map(a => ({ [a.value]: { type: 'Argument', value: a.value } })))
-)
 
 class Parser {
   constructor (tokens) {
@@ -36,21 +32,42 @@ class Parser {
   }
 }
 
-let setVar = (scope, name, value) => {
-  if (scope[name] != null) {
-    let e = typeError('defined', name)
-    throw new Error(e)
+class Scope {
+  constructor (parent = null, args = []) {
+    this._scope = {}
+    this._parent = parent
+    this._args = args
   }
-  scope[name] = value
-}
-
-let getVar = (scope, name) => {
-  let variable = scope[name]
-  if (variable == null) {
-    let e = typeError('undefined', name)
-    throw new Error(e)
+  get depth () {
+    return this._parent ? this._parent.depth + 1 : 0
   }
-  return variable
+  set (name, value) {
+    if (this.get(name)) {
+      throw new Error(typeError('defined', name))
+    }
+    this._scope[name] = value
+    return this
+  }
+  get (name) {
+    return (
+      this._scope[name] || (this._parent && this._parent.get(name)) || null
+    )
+  }
+  call (args = []) {
+    if (this._args.length !== args.length) {
+      throw new Error('Received mismatched args lists')
+    }
+    let closure = new Scope(this)
+    this._args.forEach((arg, i) => closure.set(arg.value, args[i]))
+    return closure
+  }
+  create (args) {
+    return new Scope(this, args)
+  }
+  link (parent) {
+    this._parent = parent
+    return this
+  }
 }
 
 let getAttrs = (scope, parser, attrs = []) => {
@@ -61,19 +78,9 @@ let getAttrs = (scope, parser, attrs = []) => {
       return attrs
 
     case 'attribute': {
-      let value
       let name = token.value
-      if (parser.nextType === 'variable') {
-        let variable = getVar(scope, parser.take('variable').value)
-        if (variable.type !== 'Static' && variable.type !== 'Argument') {
-          let e = typeError('not_static', token.value)
-          throw new Error(e)
-        }
-        value = variable
-      } else {
-        value = parser.take('string')
-      }
-      attrs.push(attributeNode(name, value))
+      let value = parser.take(['string', 'variable'])
+      attrs.push(attribute(name, value))
       break
     }
 
@@ -97,8 +104,8 @@ let getChildren = (scope, parser, children = []) => {
 
       switch (token.value) {
         case 'def': {
-          let variable = staticVar(parser.take('string').value)
-          setVar(scope, name, variable)
+          let variable = parser.take('string')
+          scope.set(name, variable)
           break
         }
 
@@ -107,14 +114,20 @@ let getChildren = (scope, parser, children = []) => {
           let args = parser.takeAll('variable')
           parser.take('close_paren')
           parser.take('open_bracket')
-          let node = tmplVar(scope, args)
-          let children = getChildren(argsToScope(node.scope, node.args), parser)
+
+          let closure = scope.create(args)
+          let children = getChildren(closure, parser)
+
           if (children.length !== 1) {
             let e = typeError('tmpl_child', name)
             throw new Error(e)
           }
-          node.value = children[0]
-          setVar(scope, name, node)
+
+          scope.set(name, {
+            type: 'tmpl',
+            scope: closure,
+            value: children[0]
+          })
           break
         }
       }
@@ -122,34 +135,25 @@ let getChildren = (scope, parser, children = []) => {
     }
 
     case 'tag': {
-      let node = elementNode(scope, token.value, getAttrs(scope, parser))
+      let node = element(scope, token.value, getAttrs(scope, parser))
       node.children = getChildren(node.scope, parser)
       children.push(node)
       break
     }
 
     case 'string': {
-      children.push(textNode(token.value))
+      children.push(text(token.value))
       break
     }
 
     case 'variable': {
-      let variable = getVar(scope, token.value)
-      switch (variable.type) {
-        case 'Static':
-          children.push(variableNode(token.value))
-          break
-        case 'Argument':
-          children.push(variableNode(token.value))
-          break
-        case 'Template':
-          parser.take('open_paren')
-          let args = parser.takeAll(['string', 'variable']).map(a =>
-            a.type === 'variable' ? getVar(scope, a.value) && a : a
-          )
-          parser.take('close_paren')
-          children.push(variableNode(token.value, args))
-          break
+      if (parser.nextType === 'open_paren') {
+        parser.take('open_paren')
+        let args = parser.takeAll(['string', 'variable'])
+        parser.take('close_paren')
+        children.push(variable(token.value, args))
+      } else {
+        children.push(variable(token.value))
       }
       break
     }
@@ -165,7 +169,8 @@ let getChildren = (scope, parser, children = []) => {
 
 module.exports = (input) => {
   let parser = new Parser(input)
-  let node = rootNode()
+  let rootScope = new Scope()
+  let node = root(rootScope)
   node.children = getChildren(node.scope, parser)
   return node
 }
