@@ -1,25 +1,30 @@
 
+let { pad } = require('./util/helpers')
+
 let renderAttrs = (attrs) => (
   attrs.map(a => ` ${a.name}="${a.value}"`).join('')
 )
 
-let renderIndent = (x) => (
-  [...Array(x)].map(_ => ' ').join('')
+let isSingleTextNode = (xs) => (
+  xs.length === 1 && typeof xs[0] === 'string'
 )
 
 let renderElem = (options, lvl = 0) => (elem) => {
-  let indent = renderIndent(lvl * options.indentDepth)
+  let indent = pad(' ', lvl * options.indentDepth)
 
   if (typeof elem === 'string') {
     return indent + elem
   }
 
   let attrs = renderAttrs(elem.attributes)
+  let compact = isSingleTextNode(elem.children)
+  let children = compact ? elem.children : elem.children.map(renderElem(options, lvl + 1))
+
   return [
     indent + '<' + elem.tag + attrs + '>',
-    ...elem.children.map(renderElem(options, lvl + 1)),
-    indent + '</' + elem.tag + '>'
-  ].join(options.lineSeperator)
+    ...children,
+    (compact ? '' : indent) + '</' + elem.tag + '>'
+  ].join(compact ? '' : options.lineSeperator)
 }
 
 module.exports = (input) => {
