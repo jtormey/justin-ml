@@ -22,6 +22,10 @@ let typeError = generalError('Type Error', (type, varName) => {
   }
 })
 
+let eoiError = generalError('Unexpected End of Input', () =>
+  `Expected a token but reached end of input stream`
+)
+
 let lexicalError = (input, meta) => (
   `Unexpected Token (line ${meta.lc})\n
     | ${meta.lastline}${input.split('\n')[0]}
@@ -33,5 +37,6 @@ module.exports = {
   generalError,
   syntaxError,
   typeError,
+  eoiError,
   lexicalError
 }

@@ -16,11 +16,19 @@ let pad = (c, n) =>
 let first = (xs) =>
   xs && xs.length ? xs[0] : null
 
+let contains = (elem, list) =>
+  list.indexOf(elem) > -1
+
+let asArray = (maybeArray) =>
+  maybeArray && Array.isArray(maybeArray) ? maybeArray : [maybeArray]
+
 module.exports = {
   parse,
   assign,
   inherit,
   show,
   pad,
-  first
+  first,
+  contains,
+  asArray
 }
