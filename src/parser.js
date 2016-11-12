@@ -1,4 +1,10 @@
 
+let assign = (...args) => Object.assign({}, ...args)
+
+let argsToScope = (scope, args) => (
+  assign(scope, ...args.map(a => ({ [a.value]: { type: 'Argument', value: a.value } })))
+)
+
 let generalError = (type, errorf) => (...args) => (
   `${type}\n\n\t${errorf(...args)}\n`
 )
@@ -24,16 +30,16 @@ let staticVar = (value) => ({
   type: 'Static', value
 })
 
-let tmplVar = (value) => ({
-  type: 'Template', value
+let tmplVar = (scope, args) => ({
+  type: 'Template', scope: Object.assign({}, scope), args
 })
 
 let rootNode = () => ({
   type: 'Root', scope: {}
 })
 
-let elementNode = (parent, name, attrs) => ({
-  type: 'Element', name, attrs, scope: Object.assign({}, parent.scope)
+let elementNode = (scope, name, attrs) => ({
+  type: 'Element', name, attrs, scope: Object.assign({}, scope)
 })
 
 let textNode = (value) => ({
@@ -44,16 +50,20 @@ let attributeNode = (name, value) => ({
   type: 'Attribute', name, value
 })
 
-let setVar = (node, name, value) => {
-  if (node.scope[name] != null) {
+let variableNode = (value, args) => ({
+  type: 'Variable', value, args
+})
+
+let setVar = (scope, name, value) => {
+  if (scope[name] != null) {
     let e = typeError('defined', name)
     throw new Error(e)
   }
-  node.scope[name] = value
+  scope[name] = value
 }
 
-let getVar = (node, name) => {
-  let variable = node.scope[name]
+let getVar = (scope, name) => {
+  let variable = scope[name]
   if (variable == null) {
     let e = typeError('undefined', name)
     throw new Error(e)
@@ -63,16 +73,28 @@ let getVar = (node, name) => {
 
 let get = (type, input) => {
   let token = take(input)
-  if (token.type !== type) {
-    let e = syntaxError(type, token.type)
+  if (!token || token.type !== type) {
+    let e = syntaxError(type, token ? token.type : null)
     throw new Error(e)
   }
-  return token.value
+  return token
+}
+
+let getAll = (type, input) => {
+  let tokens = []
+  while (input[0] && input[0].type === type) tokens.push(take(input))
+  return tokens
+}
+
+let getEvery = (types, input) => {
+  let tokens = []
+  while (types.indexOf(input[0] && input[0].type) > -1) tokens.push(take(input))
+  return tokens
 }
 
 let take = (input) => input.shift()
 
-let getAttrs = (parent, input, attrs = []) => {
+let getAttrs = (scope, input, attrs = []) => {
   let token = take(input)
 
   switch (token.type) {
@@ -81,16 +103,16 @@ let getAttrs = (parent, input, attrs = []) => {
 
     case 'attribute': {
       let value
-      let name = token.value.slice(0, -1)
+      let name = token.value
       if (input[0].type === 'variable') {
-        let variable = getVar(parent, get('variable', input))
-        if (variable.type !== 'Static') {
+        let variable = getVar(scope, get('variable', input).value)
+        if (variable.type !== 'Static' && variable.type !== 'Argument') {
           let e = typeError('not_static', token.value)
           throw new Error(e)
         }
-        value = variable.value
+        value = variable
       } else {
-        value = get('string', input).slice(1, -1)
+        value = get('string', input)
       }
       attrs.push(attributeNode(name, value))
       break
@@ -101,10 +123,10 @@ let getAttrs = (parent, input, attrs = []) => {
       let e = syntaxError(expected, token.type)
       throw new Error(e)
   }
-  return getAttrs(parent, input, attrs)
+  return getAttrs(scope, input, attrs)
 }
 
-let getChildren = (parent, input, children = []) => {
+let getChildren = (scope, input, children = []) => {
   let token = take(input)
 
   switch (token.type) {
@@ -112,23 +134,28 @@ let getChildren = (parent, input, children = []) => {
       return children
 
     case 'keyword': {
-      let name = get('variable', input)
+      let name = get('variable', input).value
 
       switch (token.value) {
         case 'def': {
-          let variable = staticVar(get('string', input).slice(1, -1))
-          setVar(parent, name, variable)
+          let variable = staticVar(get('string', input).value)
+          setVar(scope, name, variable)
           break
         }
 
         case 'tmpl': {
+          get('open_paren', input)
+          let args = getAll('variable', input)
+          get('close_paren', input)
           get('open_bracket', input)
-          let children = getChildren(parent, input)
+          let node = tmplVar(scope, args)
+          let children = getChildren(argsToScope(node.scope, node.args), input)
           if (children.length !== 1) {
             let e = typeError('tmpl_child', name)
             throw new Error(e)
           }
-          setVar(parent, name, tmplVar(children[0]))
+          node.value = children[0]
+          setVar(scope, name, node)
           break
         }
       }
@@ -136,25 +163,33 @@ let getChildren = (parent, input, children = []) => {
     }
 
     case 'tag': {
-      let node = elementNode(parent, token.value, getAttrs(parent, input))
-      node.children = getChildren(node, input)
+      let node = elementNode(scope, token.value, getAttrs(scope, input))
+      node.children = getChildren(node.scope, input)
       children.push(node)
       break
     }
 
     case 'string': {
-      children.push(textNode(token.value.slice(1, -1)))
+      children.push(textNode(token.value))
       break
     }
 
     case 'variable': {
-      let variable = getVar(parent, token.value)
+      let variable = getVar(scope, token.value)
       switch (variable.type) {
         case 'Static':
-          children.push(textNode(variable.value))
+          children.push(variableNode(token.value))
+          break
+        case 'Argument':
+          children.push(variableNode(token.value))
           break
         case 'Template':
-          children.push(variable.value)
+          get('open_paren', input)
+          let args =
+            getEvery(['string', 'variable'], input)
+            .map(a => a.type === 'variable' ? getVar(scope, a.value) && a : a)
+          get('close_paren', input)
+          children.push(variableNode(token.value, args))
           break
       }
       break
@@ -166,11 +201,11 @@ let getChildren = (parent, input, children = []) => {
       throw new Error(e)
   }
 
-  return input.length > 0 ? getChildren(parent, input, children) : children
+  return input.length > 0 ? getChildren(scope, input, children) : children
 }
 
 module.exports = (input) => {
   let node = rootNode()
-  node.children = getChildren(node, input)
+  node.children = getChildren(node.scope, input)
   return node
 }

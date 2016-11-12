@@ -48,6 +48,8 @@ let lexer = new Lexer()
 lexer
   .match('^{', 'open_bracket')
   .match('^}', 'close_bracket')
+  .match(/^\(/, 'open_paren')
+  .match(/^\)/, 'close_paren')
   .match(/^\s/, null)
   .match(/^\/\/[^\n]*/, null)
   .match(/^def|^tmpl/, 'keyword', { value: true })
