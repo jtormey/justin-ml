@@ -18,8 +18,8 @@ let readIn = () => {
   if (src == null) {
     throw new Error('Must provide a file path')
   }
-  if (src.slice(-7) !== '.justin') {
-    throw new Error('File must be a .justin file')
+  if (src.slice(-4) !== '.jml') {
+    throw new Error('File must be a .jml file')
   }
   return fs.readFileSync(src).toString()
 }

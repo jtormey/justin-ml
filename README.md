@@ -21,7 +21,7 @@ Options
 * `--pretty` Format outputted html
 
 ```
-$ justin-ml compile_this.justin
+$ justin-ml compile_this.jml
 ```
 
 ## Language
