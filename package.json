@@ -1,8 +1,11 @@
 {
-  "name": "compiler",
+  "name": "justin-ml",
   "version": "0.0.0",
-  "description": "Simple compiler",
+  "description": "Compiler for a simple templating language",
   "main": "src/index.js",
+  "bin": {
+    "justin-ml": "src/cli/index.js"
+  },
   "scripts": {
     "test": "node_modules/.bin/mocha test/*.spec.js"
   },
@@ -19,5 +22,8 @@
     "chai": "~3.5.0",
     "mocha": "~3.1.2",
     "standard": "~8.5.0"
+  },
+  "dependencies": {
+    "commander": "~2.9.0"
   }
 }
