@@ -13,15 +13,20 @@ program
   .option('--pretty', 'Make output pretty')
   .parse(process.argv)
 
-let readIn = () => {
+let readIn = (cb) => {
   let src = program.input ? program.input : program.args[0]
-  if (src == null) {
-    throw new Error('Must provide a file path')
+  if (src != null) {
+    if (src.slice(-4) !== '.jml') {
+      throw new Error('File must be a .jml file')
+    }
+    cb(fs.readFileSync(src).toString())
+  } else if (!process.stdin.isTTY) {
+    let input = []
+    process.stdin.on('data', (data) => { input.push(data.toString()) })
+    process.stdin.on('end', () => { cb(input.join('')) })
+  } else {
+    program.help()
   }
-  if (src.slice(-4) !== '.jml') {
-    throw new Error('File must be a .jml file')
-  }
-  return fs.readFileSync(src).toString()
 }
 
 let writeOut = (output) => {
@@ -36,4 +41,6 @@ let options = {
   pretty: program.pretty
 }
 
-writeOut(compile(readIn(), options))
+readIn(input => {
+  writeOut(compile(input, options))
+})
