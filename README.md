@@ -3,9 +3,32 @@
 
 Just another templating language
 
-## Syntax
+## Usage
 
-### Brackets instead of closing tags
+### Installation
+
+From npm: `npm i -g justin-ml`
+
+From local copy: `npm i -g .`, or run with the `npm start` script
+
+### Compiling
+
+Options
+
+* `-V, --version` Installed version
+* `-i, --input` Input file (optional, can use file arg instead)
+* `-o, --output` Output file (optional, default writes to stdout)
+* `--pretty` Format outputted html
+
+```
+$ justin-ml compile_this.justin
+```
+
+## Language
+
+### Syntax
+
+Brackets instead of closing tags
 
 ```
 div {
@@ -13,28 +36,28 @@ div {
 }
 ```
 
-### Attributes use : instead of =
+Attributes use : instead of =
 
 ```
 a href:"google.com" { }
 ```
 
-### Text represented as strings
+Text represented as strings
 
 ```
 span { "some text" }
 ```
 
-### JS style comments
+JS style comments
 
 ```
 // This will be ignored
 span { "hello" }
 ```
 
-## Language Features
+### Features
 
-### Variables
+Variables
 
 ```
 def $primary "blue"
@@ -45,7 +68,7 @@ a href:$link color:$primary {
 }
 ```
 
-### Templates
+Templates
 
 ```
 tmpl $button ($color $action) {
@@ -59,3 +82,8 @@ div class:"shopping-cart-footer" {
   $button ("green" "continue to checkout")
 }
 ```
+
+## Todo
+
+* Way to import other files
+* Control flow keywords
