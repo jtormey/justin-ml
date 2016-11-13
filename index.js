@@ -1,9 +1,0 @@
-
-let lexer = require('./src/lexer')
-let parser = require('./src/parser')
-let transformer = require('./src/transformer')
-let generator = require('./src/generator')
-
-module.exports = (mul, options) => (
-  generator(transformer(parser(lexer(mul))), options)
-)
