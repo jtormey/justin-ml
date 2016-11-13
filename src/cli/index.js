@@ -15,6 +15,12 @@ program
 
 let readIn = () => {
   let src = program.input ? program.input : program.args[0]
+  if (src == null) {
+    throw new Error('Must provide a file path')
+  }
+  if (src.slice(-7) !== '.justin') {
+    throw new Error('File must be a .justin file')
+  }
   return fs.readFileSync(src).toString()
 }
 
