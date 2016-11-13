@@ -33,5 +33,5 @@ module.exports = (input, options = {}) => {
 
   return input
     .map(renderElem({ lineSeperator, indentDepth }))
-    .join(lineSeperator) + '\n'
+    .join(lineSeperator) + lineSeperator
 }
